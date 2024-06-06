@@ -94,9 +94,9 @@ void fetchEvent(RecentChanneMessageCallBack callback) async {
 
   final filters = [
     Filter(
-        kinds: [1],
-        // since: DateTime.now().toUtc().millisecondsSinceEpoch * 1000 - 600,
-        // until: DateTime.now().toUtc().millisecondsSinceEpoch * 1000,
+        kinds: [30078],
+        d: ["eew_alert_system_by_shino3"],
+        authors: ["0955d4241024ed1fb0fb5f0607741a3b82ceae940413e566322f9d61cc842def"],
         limit: 10)
   ];
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import "package:nostr_core_dart/nostr.dart";
 import "nostr/connect.dart";
@@ -14,6 +15,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+      ),
       home: MainScreen(),
     );
   }
@@ -36,11 +40,8 @@ class _MainScreenState extends State<MainScreen> {
   final _streamController = StreamController<List<EEWItem>>();
   void eewCallback(List<Item> channelMessageList) {
     var postListItems = channelMessageList.map((item) {
-      return EEWItem(
-        id: item.id,
-        content: item.content,
-        datetime: item.datetime,
-      );
+      Map<String, dynamic> contentJson = jsonDecode(item.content);
+      return EEWItem.fromJson(contentJson);
     }).toList();
     _streamController.add(postListItems);
   }
@@ -73,7 +74,7 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Connection Status'),
+          title: const Text('Connection Status'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: relays.map((relay) {
@@ -107,7 +108,7 @@ class _MainScreenState extends State<MainScreen> {
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Close'),
+              child: const Text('Close'),
             ),
           ],
         );
@@ -124,16 +125,16 @@ class _MainScreenState extends State<MainScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Main Screen'),
+            const Text('緊急地震速報'),
             Text(
               'Connections: $connectedCount/${relays.length}',
-              style: TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.settings),
+            icon: const Icon(Icons.settings),
             onPressed: () => _showConnectionStatusModal(context),
           ),
         ],
@@ -141,23 +142,53 @@ class _MainScreenState extends State<MainScreen> {
       body: StreamBuilder<List<EEWItem>>(
         stream: _streamController.stream,
         builder: (context, snapshot) {
-          // step 2 タイムラインを表示してみよう
-          // データがない場合
           if (!snapshot.hasData) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
-          // データがある場合
           List<EEWItem> postItems = snapshot.data!;
-          return ListView.builder(
-            itemCount: postItems.length,
-            itemBuilder: (context, index) {
-              EEWItem item = postItems[index];
-              return ListTile(
-                title: Text(item.content),
-                // subtitle: Text(item.text),
-              );
-            },
+          if (postItems.isEmpty) {
+            return const Center(child: Text('No data available'));
+          }
+
+          EEWItem latestItem = postItems.first;
+          return Center(
+            // padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '緊急地震速報（第${latestItem.serial}報）',
+                  style: const TextStyle(fontSize: 24, color: Colors.yellow),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  latestItem.reportTime,
+                  style: const TextStyle(fontSize: 20),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '震度 ${latestItem.forecast}',
+                  style: const TextStyle(fontSize: 48),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'M ${latestItem.magnitude}',
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  latestItem.place,
+                  style: const TextStyle(fontSize: 32),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '北緯 ${latestItem.latitude}度、東経 ${latestItem.longitude}度\n深さ ${latestItem.depth}km',
+                  style: const TextStyle(fontSize: 20),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           );
         },
       ),
